@@ -1,0 +1,11 @@
+build/
+mavlink/
+generated/
+*.log
+*.tmp
+*.bak
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
