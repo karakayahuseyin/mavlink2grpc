@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package mavlink.{{ dialect.name }};
+
+option cc_enable_arenas = true;
+option go_package = "github.com/youruser/mavlink2grpc/gen/go/mavlink/{{ dialect.name }}";
+option java_package = "com.mavlink.{{ dialect.name }}";
+option java_outer_classname = "{{ dialect.name | title }}Proto";
+
+// Generated from {{ dialect.name }}.xml
+// MAVLink protocol version: {{ dialect.version }}
+
+{% if dialect.enums %}
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+{% for enum_name, enum in dialect.enums.items() %}
+{% if enum.description %}
+{{ format_comment(enum.description, 0) }}
+{% endif %}
+{% if enum.is_bitmask %}
+// NOTE: This is a bitmask. Use bitwise operations to check flags.
+{% endif %}
+{% if enum.deprecated %}
+// DEPRECATED since {{ enum.deprecated }}{% if enum.replaced_by %}, replaced by {{ enum.replaced_by }}{% endif %}
+{% endif %}
+enum {{ sanitize_enum_name(enum_name) }} {
+  {% if enum.entries %}
+  {% set first_entry = enum.entries[0] %}
+  {% if first_entry.value != 0 %}
+  // Proto3 requires first enum value to be 0
+  {{ enum_name }}_UNSPECIFIED = 0;
+  {% endif %}
+  {% for entry in enum.entries %}
+  {% if entry.description %}
+  {{ format_comment(entry.description, 2) }}
+  {% endif %}
+  {% if entry.deprecated %}
+  // DEPRECATED since {{ entry.deprecated }}{% if entry.replaced_by %}, replaced by {{ entry.replaced_by }}{% endif %}
+  {% endif %}
+  {{ entry.name }} = {{ entry.value }};
+  {% endfor %}
+  {% endif %}
+}
+
+{% endfor %}
+{% endif %}
+
+{% if dialect.messages %}
+// ============================================================================
+// MESSAGES
+// ============================================================================
+
+{% for msg_id, message in dialect.messages.items() %}
+{% if message.description %}
+{{ format_comment(message.description, 0) }}
+{% endif %}
+// MAVLink message ID: {{ message.id }}
+{% if message.deprecated %}
+// DEPRECATED since {{ message.deprecated }}{% if message.replaced_by %}, replaced by {{ message.replaced_by }}{% endif %}
+{% endif %}
+{% if message.superseded %}
+// SUPERSEDED since {{ message.superseded }}{% if message.replaced_by %}, replaced by {{ message.replaced_by }}{% endif %}
+{% endif %}
+{% if message.wip %}
+// WARNING: Work in progress. This message may change.
+{% endif %}
+message {{ sanitize_message_name(message.name) }} {
+  {% if message.fields %}
+  {% for field in message.fields %}
+  {% if field.description %}
+  {{ format_comment(field.description, 2) }}
+  {% endif %}
+  {% if field.units %}
+  // Units: {{ field.units }}
+  {% endif %}
+  {% if field.invalid %}
+  // Invalid value: {{ field.invalid }}
+  {% endif %}
+  {% if field.enum %}
+  {{ sanitize_enum_name(field.enum) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
+  {% else %}
+  {{ to_proto_type(field.type) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+}
+
+{% endfor %}
+{% endif %}

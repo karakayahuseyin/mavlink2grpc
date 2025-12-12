@@ -11,6 +11,8 @@ from .models import (
     MAVLinkDialect,
 )
 from .parser import MAVLinkParser
+from .generator import ProtoGenerator
+from .type_converter import TypeConverter
 
 __all__ = [
     "EnumEntry",
@@ -19,4 +21,6 @@ __all__ = [
     "Message",
     "MAVLinkDialect",
     "MAVLinkParser",
+    "ProtoGenerator",
+    "TypeConverter",
 ]

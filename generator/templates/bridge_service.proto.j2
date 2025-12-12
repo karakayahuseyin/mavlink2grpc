@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package mavlink;
+
+{% for dialect_name in dialect_names %}
+import "mavlink/{{ dialect_name }}.proto";
+{% endfor %}
+
+option cc_enable_arenas = true;
+option go_package = "github.com/youruser/mavlink2grpc/gen/go/mavlink";
+option java_package = "com.mavlink";
+option java_outer_classname = "BridgeProto";
+
+// ============================================================================
+// MAVLink Bridge Service
+// ============================================================================
+
+// Simple raw message bridge - streams and sends MAVLink messages as-is
+service MavlinkBridge {
+  // Stream MAVLink messages from connected systems
+  rpc StreamMessages(StreamFilter) returns (stream MavlinkMessage);
+
+  // Send a MAVLink message to a system
+  rpc SendMessage(MavlinkMessage) returns (SendResponse);
+}
+
+// ============================================================================
+// COMMON MESSAGES
+// ============================================================================
+
+// Filter for streaming messages
+message StreamFilter {
+  // Filter by system ID (0 = all systems)
+  uint32 system_id = 1;
+
+  // Filter by component ID (0 = all components)
+  uint32 component_id = 2;
+
+  // Filter by message IDs (empty = all messages)
+  // Example: [0, 33, 30] for HEARTBEAT, GLOBAL_POSITION_INT, ATTITUDE
+  repeated uint32 message_ids = 3;
+}
+
+// Response for SendMessage
+message SendResponse {
+  // True if message was sent successfully
+  bool success = 1;
+
+  // Error message if success is false
+  string error = 2;
+}
+
+// Generic wrapper for any MAVLink message
+message MavlinkMessage {
+  // MAVLink header fields
+  uint32 system_id = 1;
+  uint32 component_id = 2;
+  uint32 message_id = 3;
+
+  // Timestamp when message was received/sent (microseconds since Unix epoch)
+  uint64 timestamp_usec = 4;
+
+  // Message payload (oneof for type safety)
+  // Each MAVLink message gets its own field here
+  oneof payload {
+    {% for dialect_name in dialect_names %}
+    {% set dialect_messages = dialects[dialect_name].messages %}
+    {% for msg_id, message in dialect_messages.items() %}
+    {{ dialect_name }}.{{ sanitize_message_name(message.name) }} {{ message.name.lower() }} = {{ 100 + msg_id }};
+    {% endfor %}
+    {% endfor %}
+  }
+}
