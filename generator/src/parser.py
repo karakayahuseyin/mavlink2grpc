@@ -95,11 +95,11 @@ class MAVLinkParser:
         # Parse top-level attributes
         version_elem = root.find('version')
         if version_elem is not None and version_elem.text:
-            dialect.version = int(version_elem.text)
+            dialect.version = int(version_elem.text, 0)
 
         dialect_elem = root.find('dialect')
         if dialect_elem is not None and dialect_elem.text:
-            dialect.dialect = int(dialect_elem.text)
+            dialect.dialect = int(dialect_elem.text, 0)
 
         # Parse includes
         for include_elem in root.findall('include'):
@@ -163,7 +163,7 @@ class MAVLinkParser:
 
     def _parse_enum_entry(self, elem: etree._Element) -> EnumEntry:
         """Parse an <entry> element within an enum."""
-        value = int(elem.get('value', '0'))
+        value = int(elem.get('value', '0'), 0)  # base=0 auto-detects hex (0x), octal (0o), decimal
         name = elem.get('name', '')
 
         # Parse description
@@ -188,7 +188,7 @@ class MAVLinkParser:
 
     def _parse_message(self, elem: etree._Element) -> Message:
         """Parse a <message> element."""
-        msg_id = int(elem.get('id', '0'))
+        msg_id = int(elem.get('id', '0'), 0)  # base=0 auto-detects hex (0x), octal (0o), decimal
         name = elem.get('name', '')
 
         # Parse description
