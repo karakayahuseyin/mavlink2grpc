@@ -2,6 +2,13 @@ syntax = "proto3";
 
 package mavlink.{{ dialect.name }};
 
+{% if all_includes %}
+{% for include_file in all_includes %}
+{% set include_name = include_file.replace('.xml', '') %}
+import "mavlink/{{ include_name }}.proto";
+{% endfor %}
+
+{% endif %}
 option cc_enable_arenas = true;
 option go_package = "github.com/youruser/mavlink2grpc/gen/go/mavlink/{{ dialect.name }}";
 option java_package = "com.mavlink.{{ dialect.name }}";
@@ -24,6 +31,7 @@ option java_outer_classname = "{{ dialect.name | title }}Proto";
 {% endif %}
 {% if enum.deprecated %}
 // DEPRECATED since {{ enum.deprecated }}{% if enum.replaced_by %}, replaced by {{ enum.replaced_by }}{% endif %}
+
 {% endif %}
 enum {{ sanitize_enum_name(enum_name) }} {
   {% if enum.entries %}
@@ -33,6 +41,7 @@ enum {{ sanitize_enum_name(enum_name) }} {
   {{ enum_name }}_UNSPECIFIED = 0;
   {% endif %}
   {% for entry in enum.entries %}
+  {% if entry.value >= -2147483648 and entry.value <= 2147483647 %}
   {% if entry.description %}
   {{ format_comment(entry.description, 2) }}
   {% endif %}
@@ -40,6 +49,12 @@ enum {{ sanitize_enum_name(enum_name) }} {
   // DEPRECATED since {{ entry.deprecated }}{% if entry.replaced_by %}, replaced by {{ entry.replaced_by }}{% endif %}
   {% endif %}
   {{ entry.name }} = {{ entry.value }};
+  {% else %}
+  // SKIPPED: {{ entry.name }} = {{ entry.value }} (out of int32 range)
+  {% if entry.description %}
+  {{ format_comment(entry.description, 2) }}
+  {% endif %}
+  {% endif %}
   {% endfor %}
   {% endif %}
 }
@@ -59,12 +74,15 @@ enum {{ sanitize_enum_name(enum_name) }} {
 // MAVLink message ID: {{ message.id }}
 {% if message.deprecated %}
 // DEPRECATED since {{ message.deprecated }}{% if message.replaced_by %}, replaced by {{ message.replaced_by }}{% endif %}
+
 {% endif %}
 {% if message.superseded %}
 // SUPERSEDED since {{ message.superseded }}{% if message.replaced_by %}, replaced by {{ message.replaced_by }}{% endif %}
+
 {% endif %}
 {% if message.wip %}
 // WARNING: Work in progress. This message may change.
+
 {% endif %}
 message {{ sanitize_message_name(message.name) }} {
   {% if message.fields %}
@@ -79,7 +97,7 @@ message {{ sanitize_message_name(message.name) }} {
   // Invalid value: {{ field.invalid }}
   {% endif %}
   {% if field.enum %}
-  {{ sanitize_enum_name(field.enum) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
+  {{ resolve_enum_package(field.enum, current_dialect_name) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
   {% else %}
   {{ to_proto_type(field.type) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
   {% endif %}

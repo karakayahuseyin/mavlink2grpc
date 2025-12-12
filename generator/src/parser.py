@@ -2,7 +2,7 @@
 MAVLink XML parser.
 """
 from pathlib import Path
-from typing import Dict, Set
+from typing import Dict, Set, List
 from lxml import etree
 
 from .models import (
@@ -26,6 +26,42 @@ class MAVLinkParser:
         """
         self.xml_dir = Path(xml_dir)
         self.parsed_dialects: Dict[str, MAVLinkDialect] = {}
+
+    def get_all_includes(self, dialect_name: str, visited=None) -> List[str]:
+        """
+        Get all includes (transitive) for a dialect.
+
+        Args:
+            dialect_name: Name of the dialect
+            visited: Set of already visited dialects (for cycle detection)
+
+        Returns:
+            List of all include file names (recursive)
+        """
+        if visited is None:
+            visited = set()
+
+        if dialect_name in visited:
+            return []
+
+        visited.add(dialect_name)
+
+        # Parse the dialect if not already done
+        if dialect_name not in self.parsed_dialects:
+            self.parse_file(f"{dialect_name}.xml")
+
+        dialect = self.parsed_dialects[dialect_name]
+        all_includes = list(dialect.includes)
+
+        # Recursively get includes of includes
+        for include_file in dialect.includes:
+            include_name = include_file.replace('.xml', '')
+            transitive_includes = self.get_all_includes(include_name, visited)
+            for inc in transitive_includes:
+                if inc not in all_includes:
+                    all_includes.append(inc)
+
+        return all_includes
 
     def parse_file(self, xml_file: str) -> MAVLinkDialect:
         """
