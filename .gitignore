@@ -9,3 +9,16 @@ generated/
 .vscode/
 *.swp
 *.swo
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+dist/
+*.egg-info/
+.eggs/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
