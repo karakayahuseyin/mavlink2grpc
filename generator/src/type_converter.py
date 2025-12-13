@@ -82,6 +82,38 @@ class TypeConverter:
         return "[" not in field_type and field_type not in cls.TYPE_MAP
 
     @classmethod
+    def get_field_type_info(cls, field_type: str, enum_name: str = None) -> dict:
+        """
+        Get detailed type information for C++ code generation.
+
+        Args:
+            field_type: MAVLink field type
+            enum_name: Optional enum name if field references an enum
+
+        Returns:
+            Dict with: proto_type, cpp_type, is_enum, is_array, array_length
+        """
+        info = {
+            'proto_type': cls.to_proto_type(field_type),
+            'is_enum': enum_name is not None,
+            'is_array': False,
+            'array_length': None,
+            'cpp_type': field_type
+        }
+
+        if '[' in field_type and ']' in field_type:
+            info['is_array'] = True
+            start = field_type.index('[')
+            end = field_type.index(']')
+            info['array_length'] = int(field_type[start + 1:end])
+            info['cpp_type'] = field_type[:start]
+
+        if enum_name:
+            info['proto_type'] = cls.sanitize_enum_name(enum_name)
+
+        return info
+
+    @classmethod
     def sanitize_enum_name(cls, name: str) -> str:
         """
         Convert MAVLink enum name to Proto enum name (PascalCase).

@@ -90,6 +90,23 @@ def main():
         traceback.print_exc()
         return 1
 
+    # Generate C++ message converter
+    console.print(f"\n[bold]Generating C++ MessageConverter...[/bold]")
+    converter_output = Path(__file__).parent.parent / "bridge" / "src" / "mavlink"
+    
+    try:
+        proto_gen.generate_message_converter(
+            {selected_dialect: dialect},
+            converter_output
+        )
+        console.print(f"  [green]✓[/green] Generated MessageConverter.h")
+        console.print(f"  [green]✓[/green] Generated MessageConverter.cc")
+    except Exception as e:
+        console.print(f"  [red]✗[/red] ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
     # Summary
     total_enums = len(dialect.enums)
     total_messages = len(dialect.messages)

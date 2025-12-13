@@ -133,3 +133,78 @@ class ProtoGenerator:
 
         print(f"\n✓ Generated {len(dialects)} dialect proto(s) + 1 bridge service")
         print(f"  Output directory: {output_dir}")
+
+    def generate_message_converter(
+        self,
+        dialects: Dict[str, MAVLinkDialect],
+        output_dir: Path
+    ) -> None:
+        """
+        Generate C++ MessageConverter header and implementation.
+
+        Args:
+            dialects: Dictionary of dialect_name -> MAVLinkDialect
+            output_dir: Output directory for .h and .cc files
+        """
+        # Collect all messages from all dialects
+        all_messages = []
+        for dialect_name, dialect in dialects.items():
+            for msg_id, msg in dialect.messages.items():
+                # Enrich fields with type info
+                enriched_fields = []
+                for field in msg.fields:
+                    field_dict = {
+                        'name': field.name,
+                        'type': field.type,
+                        'description': field.description,
+                        'is_array': field.is_array,
+                        'array_length': field.array_length,
+                        'base_type': field.base_type,
+                        'type_info': TypeConverter.get_field_type_info(
+                            field.type, 
+                            field.enum
+                        )
+                    }
+                    enriched_fields.append(field_dict)
+
+                # Add dialect name to message for template
+                msg_with_dialect = {
+                    'name': msg.name,
+                    'id': msg.id,
+                    'dialect': dialect_name,
+                    'fields': enriched_fields,
+                    'description': msg.description,
+                }
+                all_messages.append(msg_with_dialect)
+
+        # Sort by message ID for cleaner generated code
+        all_messages.sort(key=lambda m: m['id'])
+
+        # Generate header
+        header_template = self.env.get_template("message_converter.h.j2")
+        header_content = header_template.render(
+            dialect_names=sorted(dialects.keys()),
+            messages=all_messages,
+        )
+
+        header_file = output_dir / "MessageConverter.h"
+        header_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(header_file, "w", encoding="utf-8") as f:
+            f.write(header_content)
+
+        print(f"✓ Generated {header_file}")
+
+        # Generate implementation
+        impl_template = self.env.get_template("message_converter.cc.j2")
+        impl_content = impl_template.render(
+            dialect_names=sorted(dialects.keys()),
+            messages=all_messages,
+        )
+
+        impl_file = output_dir / "MessageConverter.cc"
+        with open(impl_file, "w", encoding="utf-8") as f:
+            f.write(impl_content)
+
+        print(f"✓ Generated {impl_file}")
+        print(f"  Converter supports {len(all_messages)} message types")
+
