@@ -27,5 +27,8 @@ ENV/
 env.bak/
 venv.bak/
 
+# Generated files
 generated/
 proto/
+bridge/src/mavlink/MessageConverter.cc
+bridge/src/mavlink/MessageConverter.h
