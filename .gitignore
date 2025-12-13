@@ -1,6 +1,10 @@
+# Ignore build artifacts and generated files
 build/
-mavlink/
+./mavlink/
 generated/
+ignore.*
+
+# Logs and temporary files
 *.log
 *.tmp
 *.bak
