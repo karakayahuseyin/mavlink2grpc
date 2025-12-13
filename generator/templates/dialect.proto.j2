@@ -2,13 +2,6 @@ syntax = "proto3";
 
 package mavlink.{{ dialect.name }};
 
-{% if all_includes %}
-{% for include_file in all_includes %}
-{% set include_name = include_file.replace('.xml', '') %}
-import "mavlink/{{ include_name }}.proto";
-{% endfor %}
-
-{% endif %}
 option cc_enable_arenas = true;
 option go_package = "github.com/youruser/mavlink2grpc/gen/go/mavlink/{{ dialect.name }}";
 option java_package = "com.mavlink.{{ dialect.name }}";
