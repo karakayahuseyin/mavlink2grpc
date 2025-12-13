@@ -76,7 +76,7 @@ target_include_directories(proto_lib PUBLIC
 file(GLOB BRIDGE_SRCS
   src/*.cc
   src/mavlink/*.cc
-  src/server/*.cc
+  src/service/*.cc
 )
 
 # Bridge executable
