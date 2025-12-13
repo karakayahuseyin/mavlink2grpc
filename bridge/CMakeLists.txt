@@ -6,6 +6,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(mav2grpc_bridge VERSION 1.0.0 LANGUAGES CXX)
 
+# Require g++-13 for C++20 std::format support
+set(CMAKE_CXX_COMPILER "g++-13")
+
 find_package(Protobuf REQUIRED)
 find_package(Threads REQUIRED)
 
