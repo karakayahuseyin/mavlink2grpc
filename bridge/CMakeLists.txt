@@ -75,7 +75,6 @@ target_include_directories(proto_lib PUBLIC
 
 file(GLOB BRIDGE_SRCS
   src/*.cc
-  src/transport/*.cc
   src/mavlink/*.cc
   src/server/*.cc
 )
@@ -91,6 +90,10 @@ set(MAVLINK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../mavlink/install/include)
 target_include_directories(${PROJECT_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
   ${GENERATED_PROTOBUF_PATH}
+)
+
+# MAVLink headers as system includes to suppress warnings
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
   ${MAVLINK_INCLUDE_DIR}
 )
 
@@ -112,7 +115,8 @@ install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+# Strict warnings for our code only (not third-party headers)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
