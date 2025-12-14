@@ -1,0 +1,62 @@
+/**
+ * Copyright (C) 2025 Hüseyin Karakaya
+ * This file is part of the mavlink2grpc project licensed under the MIT License.
+ * 
+ * AUTO-GENERATED FILE - DO NOT EDIT
+ * Generated from MAVLink message definitions
+ */
+
+#pragma once
+
+#include <mavlink/common/mavlink.h>
+#include <mavlink_bridge.pb.h>
+{% for dialect_name in dialect_names %}
+#include <mavlink/{{ dialect_name }}.pb.h>
+{% endfor %}
+
+#include <optional>
+#include <chrono>
+
+namespace mav2grpc {
+
+/**
+ * @brief Auto-generated converter for MAVLink messages.
+ * 
+ * Converts between MAVLink C structs and Protocol Buffer messages.
+ * Supports {{ messages|length }} message types across {{ dialect_names|length }} dialects.
+ */
+class MessageConverter {
+public:
+  /**
+   * @brief Converts MAVLink C message to Protocol Buffer.
+   */
+  static std::optional<mavlink::MavlinkMessage> 
+  to_proto(const mavlink_message_t& mavlink_msg,
+           std::optional<uint64_t> timestamp_usec = std::nullopt);
+
+  /**
+   * @brief Converts Protocol Buffer message to MAVLink C.
+   */
+  static std::optional<mavlink_message_t>
+  from_proto(const mavlink::MavlinkMessage& proto_msg,
+             uint8_t system_id,
+             uint8_t component_id);
+
+private:
+  static uint64_t get_timestamp_usec();
+
+  // Message-specific converters ({{ messages|length }} total)
+{% for msg in messages %}
+  static void convert_{{ msg.name|lower }}_to_proto(
+    const mavlink_message_t& mavlink_msg,
+    mavlink::MavlinkMessage& proto_msg);
+
+  static bool convert_{{ msg.name|lower }}_from_proto(
+    const mavlink::{{ msg.dialect }}::{{ sanitize_message_name(msg.name) }}& proto,
+    mavlink_message_t& mavlink_msg,
+    uint8_t system_id,
+    uint8_t component_id);
+{% endfor %}
+};
+
+} // namespace mav2grpc

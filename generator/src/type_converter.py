@@ -50,6 +50,8 @@ class TypeConverter:
             'string'
             >>> TypeConverter.to_proto_type("uint8_t[8]")
             'bytes'
+            >>> TypeConverter.to_proto_type("uint32_t[6]")
+            'repeated uint32'
         """
         # Handle array types
         if "[" in mavlink_type and "]" in mavlink_type:
@@ -59,9 +61,13 @@ class TypeConverter:
             if base_type == "char":
                 return "string"
 
-            # Other arrays become bytes (more efficient than repeated)
-            # Can also use "repeated <type>" but bytes is more compact
-            return "bytes"
+            # uint8_t[] arrays become bytes (compact binary representation)
+            if base_type == "uint8_t":
+                return "bytes"
+
+            # Other numeric arrays use repeated
+            proto_type, _ = cls.TYPE_MAP.get(base_type, ("bytes", False))
+            return f"repeated {proto_type}"
 
         # Look up in type map
         proto_type, _ = cls.TYPE_MAP.get(mavlink_type, ("bytes", False))
@@ -80,6 +86,38 @@ class TypeConverter:
         """
         # If not in type map and not an array, probably an enum
         return "[" not in field_type and field_type not in cls.TYPE_MAP
+
+    @classmethod
+    def get_field_type_info(cls, field_type: str, enum_name: str = None) -> dict:
+        """
+        Get detailed type information for C++ code generation.
+
+        Args:
+            field_type: MAVLink field type
+            enum_name: Optional enum name if field references an enum
+
+        Returns:
+            Dict with: proto_type, cpp_type, is_enum, is_array, array_length
+        """
+        info = {
+            'proto_type': cls.to_proto_type(field_type),
+            'is_enum': enum_name is not None,
+            'is_array': False,
+            'array_length': None,
+            'cpp_type': field_type
+        }
+
+        if '[' in field_type and ']' in field_type:
+            info['is_array'] = True
+            start = field_type.index('[')
+            end = field_type.index(']')
+            info['array_length'] = int(field_type[start + 1:end])
+            info['cpp_type'] = field_type[:start]
+
+        if enum_name:
+            info['proto_type'] = cls.sanitize_enum_name(enum_name)
+
+        return info
 
     @classmethod
     def sanitize_enum_name(cls, name: str) -> str:
@@ -126,22 +164,25 @@ class TypeConverter:
     @classmethod
     def sanitize_field_name(cls, name: str) -> str:
         """
-        Convert MAVLink field name to Proto field name (snake_case).
+        Convert MAVLink field name to Proto field name (snake_case, lowercase).
 
         Args:
-            name: MAVLink field name (already snake_case usually)
+            name: MAVLink field name
 
         Returns:
-            Proto field name (snake_case)
+            Proto field name (lowercase snake_case)
 
         Examples:
             >>> TypeConverter.sanitize_field_name("base_mode")
             'base_mode'
-            >>> TypeConverter.sanitize_field_name("custom_mode")
-            'custom_mode'
+            >>> TypeConverter.sanitize_field_name("Vcc")
+            'vcc'
+            >>> TypeConverter.sanitize_field_name("Vservo")
+            'vservo'
         """
-        # MAVLink fields are already snake_case, just return as-is
-        return name
+        # Convert to lowercase for protobuf compatibility
+        # Protobuf field names should be lowercase_with_underscores
+        return name.lower()
 
     @classmethod
     def format_comment(cls, text: str, indent: int = 0) -> str:
