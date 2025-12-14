@@ -119,12 +119,23 @@ void Bridge::on_mavlink_message(const mavlink_message_t& msg) {
   // Convert MAVLink message to proto
   auto proto_msg = MessageConverter::to_proto(msg);
   if (!proto_msg) {
-    Logger::Warn(std::format("Failed to convert MAVLink message (msgid={})", msg.msgid));
+    // Silently ignore unsupported messages to avoid log spam
+    // Only HEARTBEAT (msgid=0) is supported in minimal dialect
     return;
   }
   
+  // Log received message
+  Logger::Info(std::format(
+    "MAVLink message received: msgid={} from sys={} comp={}",
+    msg.msgid, msg.sysid, msg.compid
+  ));
+  
   // Route the proto message to all subscribed gRPC clients
-  router_->route_message(*proto_msg);
+  size_t delivered = router_->route_message(*proto_msg);
+  
+  if (delivered > 0) {
+    Logger::Info(std::format("  → Routed to {} gRPC client(s)", delivered));
+  }
 }
 
 } // namespace mav2grpc
