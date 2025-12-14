@@ -21,7 +21,7 @@ namespace mav2grpc {
  * @brief Abstract interface for transport layer implementations.
  *
  * Provides a unified API for reading and writing bytes regardless of the
- * underlying physical medium (serial port, UDP socket, TCP connection).WWW
+ * underlying physical medium (serial port, UDP socket, TCP connection).
  */
 class Transport {
 public:
