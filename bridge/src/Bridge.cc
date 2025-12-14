@@ -128,7 +128,11 @@ void Bridge::start() {
   server_->start();
 
   // Start MAVLink connection
-  connection_->start();
+  if (!connection_->start()) {
+    Logger::Error("Failed to start MAVLink connection");
+    server_->stop();
+    return;
+  }
 
   running_ = true;
   Logger::Info("Bridge started successfully");
