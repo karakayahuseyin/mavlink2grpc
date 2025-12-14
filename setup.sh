@@ -1,9 +1,25 @@
 #!/bin/bash
 # This script sets up the environment for the project
+# Tested on Ubuntu 22.04
 
 set -e
 
 echo "Setting up the environment..."
+
+# Install system dependencies
+echo "-- Installing system dependencies..."
+sudo apt-get update
+sudo apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    python3 \
+    python3-pip \
+    libgrpc++-dev \
+    libprotobuf-dev \
+    protobuf-compiler-grpc
+
+# Clone MAVLink repository
 if [ ! -d "mavlink" ]; then
     echo "-- Cloning mavlink repository..."
     git clone https://github.com/mavlink/mavlink.git --recursive
