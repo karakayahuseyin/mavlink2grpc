@@ -62,15 +62,20 @@ void Server::stop() {
     Logger::Warn("Server not running");
     return;
   }
-  
+
   Logger::Info("Shutting down gRPC server...");
-  
+
+  // Notify service to shutdown all active streams
+  if (service_) {
+    service_->shutdown();
+  }
+
   // Shutdown the server with a deadline
   if (server_) {
     auto deadline = std::chrono::system_clock::now() + std::chrono::seconds(5);
     server_->Shutdown(deadline);
   }
-  
+
   running_ = false;
   Logger::Info("gRPC server stopped");
 }

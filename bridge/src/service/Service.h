@@ -17,6 +17,9 @@
 
 #include <memory>
 #include <functional>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 namespace mav2grpc {
 
@@ -80,9 +83,20 @@ public:
     const mavlink::MavlinkMessage* request,
     mavlink::SendResponse* response) override;
 
+  /**
+   * @brief Shutdown the service and notify all active streams.
+   *
+   * Called during server shutdown to wake up all waiting streams.
+   */
+  void shutdown();
+
 private:
   Router& router_;                        ///< Message router
   SendMessageCallback send_callback_;     ///< Callback to send messages
+
+  std::atomic<bool> shutting_down_{false};  ///< Shutdown flag
+  std::condition_variable shutdown_cv_;     ///< Condition variable for shutdown
+  std::mutex shutdown_mtx_;                 ///< Mutex for shutdown synchronization
 };
 
 } // namespace mav2grpc

@@ -7,9 +7,6 @@
 #include "Logger.h"
 #include <sstream>
 #include <chrono>
-#include <thread>
-#include <condition_variable>
-#include <mutex>
 
 namespace mav2grpc {
 
@@ -42,13 +39,14 @@ grpc::Status MavlinkBridgeServiceImpl::StreamMessages(
     }
   );
 
-  // Wait efficiently for client cancellation using condition variable
-  std::mutex mtx;
-  std::condition_variable cv;
-  std::unique_lock<std::mutex> lock(mtx);
-  
-  // Wait until context is cancelled (no CPU busy-wait)
-  cv.wait(lock, [context]() { return context->IsCancelled(); });
+  // Wait for client cancellation or server shutdown
+  // Use wait_for with timeout to handle both:
+  // - Server shutdown: notify_all() wakes immediately
+  // - Client disconnect: timeout ensures we check IsCancelled() regularly
+  std::unique_lock<std::mutex> lock(shutdown_mtx_);
+  while (!shutting_down_.load() && !context->IsCancelled()) {
+    shutdown_cv_.wait_for(lock, std::chrono::milliseconds(100));
+  }
 
   // Cleanup subscription
   router_.unsubscribe(sub_id);
@@ -100,6 +98,12 @@ grpc::Status MavlinkBridgeServiceImpl::SendMessage(
       "MAVLink send failed"
     );
   }
+}
+
+void MavlinkBridgeServiceImpl::shutdown() {
+  Logger::Info("Service shutting down, notifying all active streams...");
+  shutting_down_.store(true);
+  shutdown_cv_.notify_all();
 }
 
 } // namespace mav2grpc
