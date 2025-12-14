@@ -174,7 +174,11 @@ bool MessageConverter::convert_{{ msg.name|lower }}_from_proto(
 {% if field.is_array %}
     , {{ field.name }}_buf
 {% elif field.type_info.is_enum %}
+{% if field.name == 'command' %}
+    , static_cast<uint16_t>(proto.{{ sanitize_field_name(field.name) }}())  // MAV_CMD is uint16_t
+{% else %}
     , static_cast<uint8_t>(proto.{{ sanitize_field_name(field.name) }}())
+{% endif %}
 {% else %}
     , proto.{{ sanitize_field_name(field.name) }}()
 {% endif %}
