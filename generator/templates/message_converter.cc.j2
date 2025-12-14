@@ -7,7 +7,6 @@
  */
 
 #include "MessageConverter.h"
-#include <iostream>
 
 namespace mav2grpc {
 
@@ -37,7 +36,7 @@ MessageConverter::to_proto(const mavlink_message_t& mavlink_msg,
 {% endfor %}
 
     default:
-      std::cerr << "Unsupported MAVLink message ID: " << mavlink_msg.msgid << "\n";
+      // Unsupported message - return empty optional
       return std::nullopt;
   }
 }
