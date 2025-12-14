@@ -1,6 +1,10 @@
+# Ignore build artifacts and generated files
 build/
-mavlink/
+./mavlink/
 generated/
+ignore.*
+
+# Logs and temporary files
 *.log
 *.tmp
 *.bak
@@ -23,5 +27,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# Generated files
 generated/
 proto/
+bridge/src/mavlink/MessageConverter.cc
+bridge/src/mavlink/MessageConverter.h
+
+node_modules/
+package-lock.json

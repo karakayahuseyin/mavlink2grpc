@@ -1,0 +1,191 @@
+/**
+ * Copyright (C) 2025 Hüseyin Karakaya
+ * This file is part of the mavlink2grpc project licensed under the MIT License.
+ * 
+ * AUTO-GENERATED FILE - DO NOT EDIT
+ * Generated from MAVLink message definitions
+ */
+
+#include "MessageConverter.h"
+#include <cstring>
+#include <algorithm>
+
+namespace mav2grpc {
+
+uint64_t MessageConverter::get_timestamp_usec() {
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+}
+
+std::optional<mavlink::MavlinkMessage> 
+MessageConverter::to_proto(const mavlink_message_t& mavlink_msg,
+                           std::optional<uint64_t> timestamp_usec) {
+  mavlink::MavlinkMessage proto_msg;
+
+  // Set header fields
+  proto_msg.set_system_id(mavlink_msg.sysid);
+  proto_msg.set_component_id(mavlink_msg.compid);
+  proto_msg.set_message_id(mavlink_msg.msgid);
+  proto_msg.set_timestamp_usec(timestamp_usec.value_or(get_timestamp_usec()));
+
+  // Convert based on message ID
+  switch (mavlink_msg.msgid) {
+{% for msg in messages %}
+    case MAVLINK_MSG_ID_{{ msg.name|upper }}:
+      convert_{{ msg.name|lower }}_to_proto(mavlink_msg, proto_msg);
+      return proto_msg;
+{% endfor %}
+
+    default:
+      // Unsupported message - return empty optional
+      return std::nullopt;
+  }
+}
+
+std::optional<mavlink_message_t>
+MessageConverter::from_proto(const mavlink::MavlinkMessage& proto_msg,
+                             uint8_t system_id,
+                             uint8_t component_id) {
+  mavlink_message_t mavlink_msg;
+
+  // Handle different payload types
+  switch (proto_msg.payload_case()) {
+{% for msg in messages %}
+    case mavlink::MavlinkMessage::k{{ sanitize_message_name(msg.name) }}:
+      if (convert_{{ msg.name|lower }}_from_proto(
+            proto_msg.{{ msg.name|lower }}(), 
+            mavlink_msg, 
+            system_id, 
+            component_id)) {
+        return mavlink_msg;
+      }
+      return std::nullopt;
+{% endfor %}
+
+    case mavlink::MavlinkMessage::PAYLOAD_NOT_SET:
+      std::cerr << "Proto message has no payload set\n";
+      return std::nullopt;
+
+    default:
+      std::cerr << "Unsupported proto payload type: " << proto_msg.payload_case() << "\n";
+      return std::nullopt;
+  }
+}
+
+{% for msg in messages %}
+// ============================================================================
+// {{ msg.name|upper }} (ID: {{ msg.id }})
+// ============================================================================
+
+void MessageConverter::convert_{{ msg.name|lower }}_to_proto(
+    const mavlink_message_t& mavlink_msg,
+    mavlink::MavlinkMessage& proto_msg) {
+  
+  // Decode MAVLink message
+  mavlink_{{ msg.name|lower }}_t mavlink_data;
+  mavlink_msg_{{ msg.name|lower }}_decode(&mavlink_msg, &mavlink_data);
+
+  // Create proto message
+  auto* proto = proto_msg.mutable_{{ msg.name|lower }}();
+
+  // Convert fields
+{% for field in msg.fields %}
+{% if field.is_array %}
+{% if field.base_type == 'char' %}
+  // String field: {{ field.name }}
+  proto->set_{{ sanitize_field_name(field.name) }}(
+    std::string(mavlink_data.{{ field.name }}, 
+                strnlen(mavlink_data.{{ field.name }}, {{ field.array_length }})));
+{% elif field.base_type == 'uint8_t' %}
+  // Bytes field: {{ field.name }}
+  proto->set_{{ sanitize_field_name(field.name) }}(
+    std::string(reinterpret_cast<const char*>(mavlink_data.{{ field.name }}), 
+                {{ field.array_length }}));
+{% else %}
+  // Repeated array field: {{ field.name }}
+  for (size_t i = 0; i < {{ field.array_length }}; ++i) {
+{% if field.type_info.is_enum %}
+    proto->add_{{ sanitize_field_name(field.name) }}(
+      static_cast<mavlink::{{ msg.dialect }}::{{ field.type_info.proto_type }}>(
+        mavlink_data.{{ field.name }}[i]));
+{% else %}
+    proto->add_{{ sanitize_field_name(field.name) }}(mavlink_data.{{ field.name }}[i]);
+{% endif %}
+  }
+{% endif %}
+{% else %}
+  // Scalar field: {{ field.name }}
+{% if field.type_info.is_enum %}
+  proto->set_{{ sanitize_field_name(field.name) }}(
+    static_cast<mavlink::{{ msg.dialect }}::{{ field.type_info.proto_type }}>(
+      mavlink_data.{{ field.name }}));
+{% else %}
+  proto->set_{{ sanitize_field_name(field.name) }}(mavlink_data.{{ field.name }});
+{% endif %}
+{% endif %}
+{% endfor %}
+}
+
+bool MessageConverter::convert_{{ msg.name|lower }}_from_proto(
+    const mavlink::{{ msg.dialect }}::{{ sanitize_message_name(msg.name) }}& proto,
+    mavlink_message_t& mavlink_msg,
+    uint8_t system_id,
+    uint8_t component_id) {
+  
+{% set pack_params = [] %}
+{% for field in msg.fields %}
+{% if field.type != 'uint8_t_mavlink_version' %}
+{% set _ = pack_params.append(field) %}
+{% endif %}
+{% endfor %}
+
+{% for field in pack_params %}
+{% if field.is_array %}
+{% if field.base_type == 'char' %}
+  // Convert string to char array
+  char {{ field.name }}_buf[{{ field.array_length }}] = {};
+  const auto& {{ field.name }}_str = proto.{{ sanitize_field_name(field.name) }}();
+  std::strncpy({{ field.name }}_buf, {{ field.name }}_str.c_str(), {{ field.array_length }} - 1);
+{% elif field.base_type == 'uint8_t' %}
+  // Convert bytes to uint8_t array
+  uint8_t {{ field.name }}_buf[{{ field.array_length }}] = {};
+  const auto& {{ field.name }}_bytes = proto.{{ sanitize_field_name(field.name) }}();
+  std::memcpy({{ field.name }}_buf, {{ field.name }}_bytes.data(), 
+              std::min({{ field.name }}_bytes.size(), size_t({{ field.array_length }})));
+{% else %}
+  // Convert repeated field to array
+  {{ field.base_type }} {{ field.name }}_buf[{{ field.array_length }}] = {};
+  for (int i = 0; i < std::min(proto.{{ sanitize_field_name(field.name) }}_size(), {{ field.array_length }}); ++i) {
+{% if field.type_info.is_enum %}
+    {{ field.name }}_buf[i] = static_cast<{{ field.base_type }}>(proto.{{ sanitize_field_name(field.name) }}(i));
+{% else %}
+    {{ field.name }}_buf[i] = proto.{{ sanitize_field_name(field.name) }}(i);
+{% endif %}
+  }
+{% endif %}
+{% endif %}
+{% endfor %}
+
+  // Pack MAVLink message
+  mavlink_msg_{{ msg.name|lower }}_pack(
+    system_id,
+    component_id,
+    &mavlink_msg
+{% for field in pack_params %}
+{% if field.is_array %}
+    , {{ field.name }}_buf
+{% elif field.type_info.is_enum %}
+    , static_cast<uint8_t>(proto.{{ sanitize_field_name(field.name) }}())
+{% else %}
+    , proto.{{ sanitize_field_name(field.name) }}()
+{% endif %}
+{% endfor %}
+  );
+
+  return true;
+}
+
+{% endfor %}
+
+} // namespace mav2grpc

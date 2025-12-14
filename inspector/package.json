@@ -1,0 +1,31 @@
+{
+  "name": "mavlink-inspector",
+  "version": "1.0.0",
+  "description": "Web-based MAVLink Inspector with real-time monitoring",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "proto:generate": "grpc_tools_node_protoc --js_out=import_style=commonjs,binary:./generated --grpc_out=grpc_js:./generated --proto_path=../proto ../proto/mavlink_bridge.proto ../proto/mavlink/common.proto"
+  },
+  "keywords": [
+    "mavlink",
+    "inspector",
+    "grpc",
+    "websocket"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.9.14",
+    "@grpc/proto-loader": "^0.7.10",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "grpc-tools": "^1.12.4",
+    "nodemon": "^3.0.2"
+  }
+}

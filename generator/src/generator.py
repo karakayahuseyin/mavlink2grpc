@@ -40,28 +40,20 @@ class ProtoGenerator:
     def generate_dialect_proto(
         self,
         dialect: MAVLinkDialect,
-        output_file: Path,
-        all_includes: List[str] = None
+        output_file: Path
     ) -> None:
         """
         Generate a .proto file for a single MAVLink dialect.
 
         Args:
-            dialect: Parsed MAVLink dialect
+            dialect: Parsed MAVLink dialect (should be flattened with includes merged)
             output_file: Output .proto file path
-            all_includes: All transitive includes (optional)
         """
         # Load template
         template = self.env.get_template("dialect.proto.j2")
 
-        # Use all_includes if provided, otherwise use dialect.includes
-        includes_to_use = all_includes if all_includes is not None else dialect.includes
-
         # Render template
-        content = template.render(
-            dialect=dialect,
-            all_includes=includes_to_use
-        )
+        content = template.render(dialect=dialect)
 
         # Ensure output directory exists
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -112,38 +104,19 @@ class ProtoGenerator:
         Generate all .proto files for given dialects.
 
         Args:
-            dialects: List of parsed MAVLink dialects
+            dialects: List of parsed MAVLink dialects (should be flattened)
             output_dir: Output directory for .proto files
         """
         dialect_dict = {}
 
-        # Build enum lookup table (enum_name -> dialect_name)
-        enum_to_dialect = {}
-        for dialect in dialects:
-            for enum_name in dialect.enums.keys():
-                if enum_name not in enum_to_dialect:
-                    enum_to_dialect[enum_name] = dialect.name
-
-        # Register enum lookup helper for templates
+        # Simple enum resolution - no cross-package references needed
+        # All enums are in the same package now (flattened)
         def resolve_enum_package(enum_name: str, current_dialect_name: str) -> str:
             """
-            Resolve enum reference with package prefix if from another dialect.
-
-            Args:
-                enum_name: The enum name (e.g., "MAV_TYPE")
-                current_dialect_name: Current dialect being generated
-
-            Returns:
-                Qualified enum name (e.g., "minimal.MavType" or "MavType")
+            Resolve enum reference - just sanitize the name.
+            No cross-package resolution needed since dialects are flattened.
             """
-            dialect_name = enum_to_dialect.get(enum_name)
-            if dialect_name and dialect_name != current_dialect_name:
-                # Enum is from another dialect, add package prefix
-                sanitized_enum = TypeConverter.sanitize_enum_name(enum_name)
-                return f"{dialect_name}.{sanitized_enum}"
-            else:
-                # Enum is in current dialect or not found (will fail later)
-                return TypeConverter.sanitize_enum_name(enum_name)
+            return TypeConverter.sanitize_enum_name(enum_name)
 
         # Update template globals
         self.env.globals["resolve_enum_package"] = resolve_enum_package
@@ -151,16 +124,7 @@ class ProtoGenerator:
         # Generate individual dialect protos
         for dialect in dialects:
             proto_file = output_dir / "mavlink" / f"{dialect.name}.proto"
-
-            # Pass current dialect name to template
-            self.env.globals["current_dialect_name"] = dialect.name
-
-            # Get all transitive includes if parser is available
-            all_includes = None
-            if self.parser:
-                all_includes = self.parser.get_all_includes(dialect.name)
-
-            self.generate_dialect_proto(dialect, proto_file, all_includes)
+            self.generate_dialect_proto(dialect, proto_file)
             dialect_dict[dialect.name] = dialect
 
         # Generate bridge service proto
@@ -169,3 +133,78 @@ class ProtoGenerator:
 
         print(f"\n✓ Generated {len(dialects)} dialect proto(s) + 1 bridge service")
         print(f"  Output directory: {output_dir}")
+
+    def generate_message_converter(
+        self,
+        dialects: Dict[str, MAVLinkDialect],
+        output_dir: Path
+    ) -> None:
+        """
+        Generate C++ MessageConverter header and implementation.
+
+        Args:
+            dialects: Dictionary of dialect_name -> MAVLinkDialect
+            output_dir: Output directory for .h and .cc files
+        """
+        # Collect all messages from all dialects
+        all_messages = []
+        for dialect_name, dialect in dialects.items():
+            for msg_id, msg in dialect.messages.items():
+                # Enrich fields with type info
+                enriched_fields = []
+                for field in msg.fields:
+                    field_dict = {
+                        'name': field.name,
+                        'type': field.type,
+                        'description': field.description,
+                        'is_array': field.is_array,
+                        'array_length': field.array_length,
+                        'base_type': field.base_type,
+                        'type_info': TypeConverter.get_field_type_info(
+                            field.type, 
+                            field.enum
+                        )
+                    }
+                    enriched_fields.append(field_dict)
+
+                # Add dialect name to message for template
+                msg_with_dialect = {
+                    'name': msg.name,
+                    'id': msg.id,
+                    'dialect': dialect_name,
+                    'fields': enriched_fields,
+                    'description': msg.description,
+                }
+                all_messages.append(msg_with_dialect)
+
+        # Sort by message ID for cleaner generated code
+        all_messages.sort(key=lambda m: m['id'])
+
+        # Generate header
+        header_template = self.env.get_template("message_converter.h.j2")
+        header_content = header_template.render(
+            dialect_names=sorted(dialects.keys()),
+            messages=all_messages,
+        )
+
+        header_file = output_dir / "MessageConverter.h"
+        header_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(header_file, "w", encoding="utf-8") as f:
+            f.write(header_content)
+
+        print(f"✓ Generated {header_file}")
+
+        # Generate implementation
+        impl_template = self.env.get_template("message_converter.cc.j2")
+        impl_content = impl_template.render(
+            dialect_names=sorted(dialects.keys()),
+            messages=all_messages,
+        )
+
+        impl_file = output_dir / "MessageConverter.cc"
+        with open(impl_file, "w", encoding="utf-8") as f:
+            f.write(impl_content)
+
+        print(f"✓ Generated {impl_file}")
+        print(f"  Converter supports {len(all_messages)} message types")
+

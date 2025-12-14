@@ -129,6 +129,54 @@ class MAVLinkParser:
 
         return dialect
 
+    def get_flattened_dialect(self, dialect_name: str) -> MAVLinkDialect:
+        """
+        Get a dialect with all includes merged into it.
+
+        Creates a new dialect object that contains all enums and messages
+        from the specified dialect and all its transitive includes.
+
+        Args:
+            dialect_name: Name of the dialect (without .xml extension)
+
+        Returns:
+            New MAVLinkDialect with merged content
+        """
+        # Parse the dialect if not already done
+        if dialect_name not in self.parsed_dialects:
+            self.parse_file(f"{dialect_name}.xml")
+
+        base_dialect = self.parsed_dialects[dialect_name]
+
+        # Create a new flattened dialect
+        flattened = MAVLinkDialect(
+            name=base_dialect.name,
+            file_path=base_dialect.file_path,
+            version=base_dialect.version,
+            dialect=base_dialect.dialect,
+        )
+
+        # Recursively merge includes (depth-first)
+        for include_file in base_dialect.includes:
+            include_name = include_file.replace('.xml', '')
+            included_dialect = self.get_flattened_dialect(include_name)
+
+            # Merge enums (included enums go first, can be overridden)
+            for enum_name, enum in included_dialect.enums.items():
+                if enum_name not in flattened.enums:
+                    flattened.enums[enum_name] = enum
+
+            # Merge messages (included messages go first, can be overridden)
+            for msg_id, message in included_dialect.messages.items():
+                if msg_id not in flattened.messages:
+                    flattened.messages[msg_id] = message
+
+        # Add this dialect's own enums and messages (overrides included)
+        flattened.enums.update(base_dialect.enums)
+        flattened.messages.update(base_dialect.messages)
+
+        return flattened
+
     def _parse_enum(self, elem: etree._Element) -> Enum:
         """Parse an <enum> element."""
         name = elem.get('name', '')

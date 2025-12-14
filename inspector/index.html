@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAVLink Inspector</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MAVLink Inspector</h1>
+            <div class="connection-status">
+                <span id="statusIndicator" class="status-dot disconnected"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="message-list">
+                <div class="panel-header">
+                    <h2>Messages</h2>
+                    <button id="clearBtn" class="btn-clear">Clear</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search messages...">
+                </div>
+                <div id="messageList" class="message-items"></div>
+            </aside>
+
+            <main class="message-detail">
+                <div class="panel-header">
+                    <h2 id="detailTitle">Select a message</h2>
+                    <div class="detail-controls">
+                        <button id="rawBtn" class="btn-icon" title="Show Raw">{ }</button>
+                    </div>
+                </div>
+                <div id="messageDetail" class="detail-content">
+                    <p class="placeholder">Click on a message type to view details</p>
+                </div>
+                
+                <div class="chart-panel" id="chartPanel">
+                    <div class="chart-header">
+                        <div id="fieldCheckboxes" class="field-checkboxes"></div>
+                        <select id="timeRangeSelect">
+                            <option value="30">30s</option>
+                            <option value="60" selected>1m</option>
+                            <option value="300">5m</option>
+                            <option value="600">10m</option>
+                        </select>
+                    </div>
+                    <canvas id="messageChart"></canvas>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
