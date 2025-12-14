@@ -8,6 +8,8 @@
 
 #include <chrono>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
 
 namespace mav2grpc {
 
@@ -39,10 +41,13 @@ grpc::Status MavlinkBridgeServiceImpl::StreamMessages(
     }
   );
 
-  // Keep stream alive until client cancels
-  while (!context->IsCancelled()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
+  // Wait efficiently for client cancellation using condition variable
+  std::mutex mtx;
+  std::condition_variable cv;
+  std::unique_lock<std::mutex> lock(mtx);
+  
+  // Wait until context is cancelled (no CPU busy-wait)
+  cv.wait(lock, [context]() { return context->IsCancelled(); });
 
   // Cleanup subscription
   router_.unsubscribe(sub_id);

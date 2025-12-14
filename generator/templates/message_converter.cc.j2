@@ -64,11 +64,9 @@ MessageConverter::from_proto(const mavlink::MavlinkMessage& proto_msg,
 {% endfor %}
 
     case mavlink::MavlinkMessage::PAYLOAD_NOT_SET:
-      std::cerr << "Proto message has no payload set\n";
       return std::nullopt;
 
     default:
-      std::cerr << "Unsupported proto payload type: " << proto_msg.payload_case() << "\n";
       return std::nullopt;
   }
 }
