@@ -32,3 +32,6 @@ generated/
 proto/
 bridge/src/mavlink/MessageConverter.cc
 bridge/src/mavlink/MessageConverter.h
+
+node_modules/
+package-lock.json
