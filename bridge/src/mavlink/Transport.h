@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <cstddef>
 #include <cstdint>
-#include <span>
 
 namespace mav2grpc {
 
@@ -64,12 +63,12 @@ public:
   /**
    * @brief Performs a non-blocking read operation.
    *
-   * Attempts to read up to buffer.size() bytes from the transport into
+   * Attempts to read up to buffer_size bytes from the transport into
    * the provided buffer. This is a non-blocking operation - it returns
    * immediately even if no data is available.
    *
-   * @param buffer Span of bytes to read into. The span size determines
-   *               the maximum number of bytes to read.
+   * @param buffer Pointer to buffer to read into.
+   * @param buffer_size Maximum number of bytes to read.
    *
    * @return Number of bytes actually read (may be 0 if no data available),
    *         or -1 on error.
@@ -77,7 +76,7 @@ public:
    * @note Return value of 0 indicates no data available, not end-of-stream.
    * @note Buffer contents are undefined if return value is -1 (error).
    */
-  virtual ssize_t read(std::span<std::byte> buffer) = 0;
+  virtual ssize_t read(uint8_t* buffer, size_t buffer_size) = 0;
 
   /**
    * @brief Writes data to the transport.
@@ -86,15 +85,15 @@ public:
    * This operation may block if internal buffers are full, depending on
    * implementation.
    *
-   * @param data Span of const bytes to write. All bytes will be written
-   *             unless an error occurs.
+   * @param data Pointer to data to write.
+   * @param data_size Number of bytes to write.
    *
    * @return Number of bytes actually written, or -1 on error.
    *
    * @note Partial writes are possible. Caller must check return value
    *       and retry if necessary.
    */
-  virtual ssize_t write(std::span<const std::byte> data) = 0;
+  virtual ssize_t write(const uint8_t* data, size_t data_size) = 0;
 
   // Non-copyable
   Transport(const Transport&) = delete;

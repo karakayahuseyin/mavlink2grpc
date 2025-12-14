@@ -6,15 +6,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(mav2grpc_bridge VERSION 1.0.0 LANGUAGES CXX)
 
-# Require GCC >= 13 for C++20 std::format support
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
-    message(FATAL_ERROR "GCC version 13 or higher is required for C++20 std::format support. Found version ${CMAKE_CXX_COMPILER_VERSION}.")
-  endif()
-else()
-  message(WARNING "This project is tested with GCC 13+. You are using ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}. Ensure your compiler supports C++20 std::format.")
-endif()
-
 find_package(Protobuf REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -116,7 +107,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  CXX_STANDARD 20
+  CXX_STANDARD 17
   CXX_STANDARD_REQUIRED ON
 )
 

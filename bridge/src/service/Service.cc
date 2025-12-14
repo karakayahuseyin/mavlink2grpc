@@ -5,7 +5,7 @@
 
 #include "Service.h"
 #include "Logger.h"
-
+#include <sstream>
 #include <chrono>
 #include <thread>
 #include <condition_variable>
@@ -25,12 +25,13 @@ grpc::Status MavlinkBridgeServiceImpl::StreamMessages(
     const mavlink::StreamFilter* request,
     grpc::ServerWriter<mavlink::MavlinkMessage>* writer) {
   
-  Logger::Info(std::format(
-    "Client connected - StreamMessages (sys:{}, comp:{}, msgs:{})",
-    request->system_id(),
-    request->component_id(),
-    request->message_ids_size()
-  ));
+  {
+    std::ostringstream oss;
+    oss << "Client connected - StreamMessages (sys:" << request->system_id()
+        << ", comp:" << request->component_id()
+        << ", msgs:" << request->message_ids_size() << ")";
+    Logger::Info(oss.str());
+  }
 
   // Subscribe to router with filter
   uint64_t sub_id = router_.subscribe(
@@ -52,7 +53,11 @@ grpc::Status MavlinkBridgeServiceImpl::StreamMessages(
   // Cleanup subscription
   router_.unsubscribe(sub_id);
 
-  Logger::Info(std::format("Client disconnected - StreamMessages (ID: {})", sub_id));
+  {
+    std::ostringstream oss;
+    oss << "Client disconnected - StreamMessages (ID: " << sub_id << ")";
+    Logger::Info(oss.str());
+  }
 
   return grpc::Status::OK;
 }
@@ -78,20 +83,18 @@ grpc::Status MavlinkBridgeServiceImpl::SendMessage(
 
   if (success) {
     response->set_success(true);
-    Logger::Info(std::format(
-      "Sent message (ID: {}, sys: {}, comp: {})",
-      request->message_id(),
-      request->system_id(),
-      request->component_id()
-    ));
+    std::ostringstream oss;
+    oss << "Sent message (ID: " << request->message_id()
+        << ", sys: " << request->system_id()
+        << ", comp: " << request->component_id() << ")";
+    Logger::Info(oss.str());
     return grpc::Status::OK;
   } else {
     response->set_success(false);
     response->set_error("Failed to send via MAVLink connection");
-    Logger::Error(std::format(
-      "Failed to send message (ID: {})",
-      request->message_id()
-    ));
+    std::ostringstream oss;
+    oss << "Failed to send message (ID: " << request->message_id() << ")";
+    Logger::Error(oss.str());
     return grpc::Status(
       grpc::StatusCode::INTERNAL,
       "MAVLink send failed"

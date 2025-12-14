@@ -8,7 +8,7 @@
 #include "mavlink/UdpTransport.h"
 #include "mavlink/SerialTransport.h"
 #include "service/Logger.h"
-#include <format>
+#include <sstream>
 #include <regex>
 #include <stdexcept>
 
@@ -30,7 +30,9 @@ std::unique_ptr<Transport> Bridge::parse_connection_url(const std::string& url) 
   // UDP server (e.g., udp://:14550)
   if (std::regex_match(url, match, udp_server_regex)) {
     uint16_t port = std::stoi(match[1]);
-    Logger::Info(std::format("Connecting to MAVLink via UDP server on port {}", port));
+    std::ostringstream oss;
+    oss << "Connecting to MAVLink via UDP server on port " << port;
+    Logger::Info(oss.str());
     return std::make_unique<UdpTransport>(port);
   }
 
@@ -38,7 +40,9 @@ std::unique_ptr<Transport> Bridge::parse_connection_url(const std::string& url) 
   if (std::regex_match(url, match, udp_client_regex)) {
     std::string host = match[1];
     uint16_t port = std::stoi(match[2]);
-    Logger::Info(std::format("Connecting to MAVLink via UDP client {}:{}", host, port));
+    std::ostringstream oss;
+    oss << "Connecting to MAVLink via UDP client " << host << ":" << port;
+    Logger::Info(oss.str());
     // UDP client support would need UdpTransport enhancement
     throw std::runtime_error("UDP client mode not yet implemented");
   }
@@ -47,11 +51,15 @@ std::unique_ptr<Transport> Bridge::parse_connection_url(const std::string& url) 
   if (std::regex_match(url, match, serial_regex)) {
     std::string device = match[1];
     uint32_t baudrate = std::stoi(match[2]);
-    Logger::Info(std::format("Connecting to MAVLink via serial {} @ {} baud", device, baudrate));
+    std::ostringstream oss;
+    oss << "Connecting to MAVLink via serial " << device << " @ " << baudrate << " baud";
+    Logger::Info(oss.str());
     return std::make_unique<SerialTransport>(device, baudrate);
   }
 
-  throw std::runtime_error(std::format("Invalid connection URL: {}", url));
+  std::ostringstream oss;
+  oss << "Invalid connection URL: " << url;
+  throw std::runtime_error(oss.str());
 }
 
 Bridge::Bridge(const std::string& connection_url,
@@ -180,16 +188,21 @@ void Bridge::on_mavlink_message(const mavlink_message_t& msg) {
   }
   
   // Log received message
-  Logger::Info(std::format(
-    "MAVLink message received: msgid={} from sys={} comp={}",
-    msg.msgid, msg.sysid, msg.compid
-  ));
+  {
+    std::ostringstream oss;
+    oss << "MAVLink message received: msgid=" << static_cast<int>(msg.msgid)
+        << " from sys=" << static_cast<int>(msg.sysid)
+        << " comp=" << static_cast<int>(msg.compid);
+    Logger::Info(oss.str());
+  }
   
   // Route the proto message to all subscribed gRPC clients
   size_t delivered = router_->route_message(*proto_msg);
   
   if (delivered > 0) {
-    Logger::Info(std::format("  → Routed to {} gRPC client(s)", delivered));
+    std::ostringstream oss;
+    oss << "  → Routed to " << delivered << " gRPC client(s)";
+    Logger::Info(oss.str());
   }
 }
 

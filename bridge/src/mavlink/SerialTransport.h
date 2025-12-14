@@ -82,17 +82,19 @@ public:
    * @brief Reads data from the serial port (non-blocking).
    *
    * @param buffer Destination buffer for received data
+   * @param buffer_size Maximum number of bytes to read
    * @return Number of bytes read (0 if no data available, -1 on error)
    */
-  ssize_t read(std::span<std::byte> buffer) override;
+  ssize_t read(uint8_t* buffer, size_t buffer_size) override;
 
   /**
    * @brief Writes data to the serial port.
    *
    * @param data Data to transmit
+   * @param data_size Number of bytes to write
    * @return Number of bytes written (-1 on error)
    */
-  ssize_t write(std::span<const std::byte> data) override;
+  ssize_t write(const uint8_t* data, size_t data_size) override;
 
 private:
   std::string device_;        ///< Serial device path

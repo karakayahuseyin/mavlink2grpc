@@ -8,6 +8,7 @@
 #include <csignal>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 using namespace mav2grpc;
 
@@ -81,11 +82,27 @@ int main(int argc, char* argv[]) {
   Logger::Info("MAVLink to gRPC Bridge starting...");
 
   try {
-    Logger::Info(std::format("Configuration:"));
-    Logger::Info(std::format("  Connection: {}", connection_url));
-    Logger::Info(std::format("  gRPC address: {}", grpc_address));
-    Logger::Info(std::format("  System ID: {}", system_id));
-    Logger::Info(std::format("  Component ID: {}", component_id));
+    Logger::Info("Configuration:");
+    {
+      std::ostringstream oss;
+      oss << "  Connection: " << connection_url;
+      Logger::Info(oss.str());
+    }
+    {
+      std::ostringstream oss;
+      oss << "  gRPC address: " << grpc_address;
+      Logger::Info(oss.str());
+    }
+    {
+      std::ostringstream oss;
+      oss << "  System ID: " << static_cast<int>(system_id);
+      Logger::Info(oss.str());
+    }
+    {
+      std::ostringstream oss;
+      oss << "  Component ID: " << static_cast<int>(component_id);
+      Logger::Info(oss.str());
+    }
 
     // Create and start bridge
     g_bridge = std::make_unique<Bridge>(
@@ -106,7 +123,9 @@ int main(int argc, char* argv[]) {
     return 0;
 
   } catch (const std::exception& e) {
-    Logger::Error(std::format("Fatal error: {}", e.what()));
+    std::ostringstream oss;
+    oss << "Fatal error: " << e.what();
+    Logger::Error(oss.str());
     return 1;
   }
 }

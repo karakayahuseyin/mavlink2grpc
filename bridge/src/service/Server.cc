@@ -6,7 +6,7 @@
 #include "Server.h"
 #include "Service.h"
 #include "Logger.h"
-#include <format>
+#include <sstream>
 #include <thread>
 
 namespace mav2grpc {
@@ -43,12 +43,18 @@ void Server::start() {
   server_ = builder.BuildAndStart();
   
   if (!server_) {
-    Logger::Error(std::format("Failed to start server on {}", server_address_));
+    std::ostringstream oss;
+    oss << "Failed to start server on " << server_address_;
+    Logger::Error(oss.str());
     throw std::runtime_error("Failed to start gRPC server");
   }
   
   running_ = true;
-  Logger::Info(std::format("gRPC server listening on {}", server_address_));
+  {
+    std::ostringstream oss;
+    oss << "gRPC server listening on " << server_address_;
+    Logger::Info(oss.str());
+  }
 }
 
 void Server::stop() {

@@ -74,7 +74,7 @@ bool UdpTransport::is_open() const {
   return socket_fd_ >= 0;
 }
 
-ssize_t UdpTransport::read(std::span<std::byte> buffer) {
+ssize_t UdpTransport::read(uint8_t* buffer, size_t buffer_size) {
   if (!is_open()) {
     std::cerr << "UDP socket not open for reading.\n";
     return -1;
@@ -82,7 +82,7 @@ ssize_t UdpTransport::read(std::span<std::byte> buffer) {
 
   sockaddr_in sender_addr{};
   socklen_t addr_len = sizeof(sender_addr);
-  ssize_t bytes_received = recvfrom(socket_fd_, buffer.data(), buffer.size(), 0,
+  ssize_t bytes_received = recvfrom(socket_fd_, buffer, buffer_size, 0,
                                     reinterpret_cast<sockaddr*>(&sender_addr), &addr_len);
 
   if (bytes_received < 0) {
@@ -97,7 +97,7 @@ ssize_t UdpTransport::read(std::span<std::byte> buffer) {
   return bytes_received;
 }
 
-ssize_t UdpTransport::write(std::span<const std::byte> data) {
+ssize_t UdpTransport::write(const uint8_t* data, size_t data_size) {
   if (!is_open()) {
     std::cerr << "UDP socket not open for writing.\n";
     return -1;
@@ -110,7 +110,7 @@ ssize_t UdpTransport::write(std::span<const std::byte> data) {
 
   ssize_t bytes_sent = -1;
   for (const auto& endpoint : remote_endpoints_) {
-    bytes_sent = sendto(socket_fd_, data.data(), data.size(), 0,
+    bytes_sent = sendto(socket_fd_, data, data_size, 0,
                         reinterpret_cast<const sockaddr*>(&endpoint), sizeof(endpoint));
     if (bytes_sent < 0) {
       std::cerr << "Error sending UDP datagram: " << std::strerror(errno) << "\n";
@@ -125,7 +125,7 @@ ssize_t UdpTransport::write(std::span<const std::byte> data) {
     broadcast_addr.sin_port = htons(local_port_);
     inet_pton(AF_INET, "255.255.255.255", &broadcast_addr.sin_addr);
 
-    bytes_sent = sendto(socket_fd_, data.data(), data.size(), 0,
+    bytes_sent = sendto(socket_fd_, data, data_size, 0,
                         reinterpret_cast<const sockaddr*>(&broadcast_addr), sizeof(broadcast_addr));
     if (bytes_sent < 0) {
       std::cerr << "Error sending UDP broadcast datagram: " << std::strerror(errno) << "\n";

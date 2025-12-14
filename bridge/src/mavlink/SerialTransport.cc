@@ -65,12 +65,12 @@ bool SerialTransport::is_open() const {
   return fd_ >= 0;
 }
 
-ssize_t SerialTransport::read(std::span<std::byte> buffer) {
+ssize_t SerialTransport::read(uint8_t* buffer, size_t buffer_size) {
   if (!is_open()) {
     return -1;
   }
 
-  ssize_t n = ::read(fd_, buffer.data(), buffer.size());
+  ssize_t n = ::read(fd_, buffer, buffer_size);
   
   // Non-blocking read returns -1 with EAGAIN/EWOULDBLOCK if no data
   if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
@@ -80,12 +80,12 @@ ssize_t SerialTransport::read(std::span<std::byte> buffer) {
   return n;
 }
 
-ssize_t SerialTransport::write(std::span<const std::byte> data) {
+ssize_t SerialTransport::write(const uint8_t* data, size_t data_size) {
   if (!is_open()) {
     return -1;
   }
 
-  return ::write(fd_, data.data(), data.size());
+  return ::write(fd_, data, data_size);
 }
 
 bool SerialTransport::configure_port() {

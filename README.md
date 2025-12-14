@@ -1,11 +1,11 @@
 # mavlink2grpc
-A high-performance, native bridge and code generator that exposes the entire MAVLink protocol as type-safe gRPC services using modern C++20.
+A high-performance, native bridge and code generator that exposes the entire MAVLink protocol as type-safe gRPC services using modern C++17.
 
 Designed as a robust, type-safe alternative to [mavlink2rest](https://github.com/mavlink/mavlink2rest) for professional UAV systems.
 
 ## Features
 * **Schema-First:** Auto-generates Protobuf definitions (`.proto`) directly from MAVLink XMLs.
-* **High Performance:** C++20 runtime bridge designed for zero-copy deserialization and low latency.
+* **High Performance:** C++17 runtime bridge designed for low latency and efficient resource usage.
 * **Polyglot:** Consume MAVLink telemetry in Python, Go, Rust, or Web clients via gRPC.
 * **Real-time Streaming:** Bidirectional MAVLink message streaming with gRPC server-side streaming.
 * **Web Inspector:** Built-in QGroundControl-style MAVLink inspector with live charts and frequency tracking.
@@ -16,15 +16,16 @@ Designed as a robust, type-safe alternative to [mavlink2rest](https://github.com
 Python-based code generator that converts MAVLink XML definitions to Protocol Buffer files and C++ conversion code. Uses Jinja2 templates to generate `.proto` files, gRPC service definitions, and C++ MAVLink↔Protobuf converters from XML message definitions.
 
 ### `bridge/`
-C++20 MAVLink-to-gRPC bridge that connects to MAVLink devices (UDP/Serial) and exposes real-time bidirectional message streaming via gRPC. Implements connection management, message routing, and gRPC service (`StreamMessages`, `SendMessage`). Supports MAVSDK-style connection URLs like `udp://:14550` or `serial:///dev/ttyUSB0:57600`.
+C++17 MAVLink-to-gRPC bridge that connects to MAVLink devices (UDP/Serial) and exposes real-time bidirectional message streaming via gRPC. Implements connection management, message routing, and gRPC service (`StreamMessages`, `SendMessage`). Supports MAVSDK-style connection URLs like `udp://:14550` or `serial:///dev/ttyUSB0:57600`.
 
-### `inspector/ (Demo and Debug Tool)`
+### `inspector/`
 QGroundControl-style web-based MAVLink inspector. Node.js backend (Express + Socket.IO) acts as gRPC client to the bridge and WebSocket server for the browser. Vanilla JavaScript frontend provides real-time message monitoring, frequency tracking, and multi-field chart visualization with Chart.js.
 
 ## Installation
 
 ### Requirements
-- **C++:** GCC 13+, CMake 3.15+, Protobuf 3.12+, gRPC 1.30+
+
+- **C++:** C++17 compatible compiler, CMake 3.10+, gRPC, Protocol Buffers
 - **Python:** 3.8+
 - **Node.js:** 20+
 
@@ -44,8 +45,8 @@ python3 main.py
 
 # Build bridge
 cd ../bridge/
-CXX=g++-13 cmake -B build
-cmake --build build
+cmake -B build
+cmake --build build -j$(nproc)
 
 # Install inspector dependencies
 cd ../inspector

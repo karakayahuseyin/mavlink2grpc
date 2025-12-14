@@ -5,7 +5,7 @@
 
 #include "Router.h"
 #include "Logger.h"
-
+#include <sstream>
 #include <algorithm>
 
 namespace mav2grpc {
@@ -53,13 +53,14 @@ uint64_t Router::subscribe(
     .active = true
   });
 
-  Logger::Info(std::format(
-    "Stream subscribed (ID: {}, sys: {}, comp: {}, msgs: {})",
-    sub_id,
-    filter.system_id(),
-    filter.component_id(),
-    filter.message_ids_size()
-  ));
+  {
+    std::ostringstream oss;
+    oss << "Stream subscribed (ID: " << sub_id
+        << ", sys: " << filter.system_id()
+        << ", comp: " << filter.component_id()
+        << ", msgs: " << filter.message_ids_size() << ")";
+    Logger::Info(oss.str());
+  }
 
   return sub_id;
 }
@@ -74,7 +75,9 @@ bool Router::unsubscribe(uint64_t subscription_id) {
   );
 
   if (it != subscriptions_.end()) {
-    Logger::Info(std::format("Stream unsubscribed (ID: {})", subscription_id));
+    std::ostringstream oss;
+    oss << "Stream unsubscribed (ID: " << subscription_id << ")";
+    Logger::Info(oss.str());
     subscriptions_.erase(it);
     return true;
   }
@@ -105,10 +108,9 @@ size_t Router::route_message(const mavlink::MavlinkMessage& msg) {
     } else {
       // Stream closed or error - mark inactive
       sub.active = false;
-      Logger::Warn(std::format(
-        "Stream write failed, marking inactive (ID: {})",
-        sub.id
-      ));
+      std::ostringstream oss;
+      oss << "Stream write failed, marking inactive (ID: " << sub.id << ")";
+      Logger::Warn(oss.str());
     }
   }
 
@@ -141,7 +143,9 @@ size_t Router::cleanup_inactive() {
   size_t removed = before - subscriptions_.size();
   
   if (removed > 0) {
-    Logger::Info(std::format("Cleaned up {} inactive subscriptions", removed));
+    std::ostringstream oss;
+    oss << "Cleaned up " << removed << " inactive subscriptions";
+    Logger::Info(oss.str());
   }
 
   return removed;

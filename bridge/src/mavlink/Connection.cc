@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <mutex>
 
 namespace mav2grpc {
 
@@ -80,10 +81,7 @@ bool Connection::send_message(mavlink_message_t& msg) {
   uint16_t len = mavlink_msg_to_send_buffer(tx_buffer_.data(), &msg);
 
   // Send via transport
-  auto buffer_span = std::span<const std::byte>(
-    reinterpret_cast<const std::byte*>(tx_buffer_.data()), len);
-
-  ssize_t sent = transport_->write(buffer_span);
+  ssize_t sent = transport_->write(tx_buffer_.data(), len);
 
   if (sent < 0 || static_cast<size_t>(sent) != len) {
     std::cerr << "Failed to send MAVLink message\n";
@@ -100,11 +98,11 @@ void Connection::set_message_callback(MessageCallback callback) {
 }
 
 void Connection::receive_loop() {
-  std::array<std::byte, MAX_PACKET_LEN> read_buffer;
+  std::array<uint8_t, MAX_PACKET_LEN> read_buffer;
 
   while (running_.load()) {
     // Read bytes from transport
-    ssize_t bytes_read = transport_->read(read_buffer);
+    ssize_t bytes_read = transport_->read(read_buffer.data(), read_buffer.size());
 
     if (bytes_read < 0) {
       std::cerr << "Transport read error, stopping connection\n";
@@ -119,7 +117,7 @@ void Connection::receive_loop() {
 
     // Parse each byte
     for (ssize_t i = 0; i < bytes_read; ++i) {
-      uint8_t byte = static_cast<uint8_t>(read_buffer[i]);
+      uint8_t byte = read_buffer[i];
 
       if (parse_byte(byte)) {
         // Complete message received

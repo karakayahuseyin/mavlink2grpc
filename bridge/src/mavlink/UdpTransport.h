@@ -14,7 +14,6 @@
 #include <array>
 #include <cstdint>
 #include <netinet/in.h>
-#include <span>
 #include <string>
 #include <vector>
 
@@ -104,7 +103,7 @@ public:
    * @note EAGAIN/EWOULDBLOCK is normal for non-blocking sockets with no data.
    * @note Datagrams larger than buffer size will be truncated.
    */
-  ssize_t read(std::span<std::byte> buffer) override;
+  ssize_t read(uint8_t* buffer, size_t buffer_size) override;
 
   /**
    * @brief Sends a datagram to all known remote endpoints.
@@ -113,14 +112,15 @@ public:
    * previously sent data to this socket. If no endpoints are known and
    * broadcast is enabled, may broadcast the message.
    *
-   * @param data Span of const bytes to transmit.
+   * @param data Pointer to data to transmit.
+   * @param data_size Number of bytes to transmit.
    *
    * @return Number of bytes sent to the first endpoint, or -1 on error.
    *
    * @note All-or-nothing semantics: entire datagram sent or error.
    * @note If data size exceeds MTU, fragmentation may occur at IP layer.
    */
-  ssize_t write(std::span<const std::byte> data) override;
+  ssize_t write(const uint8_t* data, size_t data_size) override;
 
   /**
    * @brief Manually adds a remote endpoint for transmission.
@@ -172,7 +172,7 @@ private:
   std::string bind_address_;                   ///< Local interface address
   bool broadcast_enabled_;                     ///< SO_BROADCAST flag
   std::vector<sockaddr_in> remote_endpoints_;  ///< Known remote endpoints
-  std::array<std::byte, DEFAULT_BUFFER_SIZE> receive_buffer_;  ///< Datagram buffer
+  std::array<uint8_t, DEFAULT_BUFFER_SIZE> receive_buffer_;  ///< Datagram buffer
 };
 
 } // namespace mav2grpc

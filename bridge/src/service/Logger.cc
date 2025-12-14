@@ -4,7 +4,8 @@
  */
 
 #include "Logger.h"
-
+#include <sstream>
+#include <iomanip>
 #include <chrono>
 #include <iostream>
 
@@ -62,8 +63,17 @@ Logger::~Logger() {
 void Logger::Log(Level level, const std::string& message) {
   // Format: [Timestamp] [Level] Message
   auto now = std::chrono::system_clock::now();
-  auto now_ms = std::chrono::floor<std::chrono::milliseconds>(now);
-  std::string timestamp = std::format("{:%Y-%m-%d %H:%M:%S}", now_ms);
+  auto now_time_t = std::chrono::system_clock::to_time_t(now);
+  auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+    now.time_since_epoch()) % 1000;
+  
+  std::tm tm_buf;
+  localtime_r(&now_time_t, &tm_buf);
+  
+  std::ostringstream timestamp_oss;
+  timestamp_oss << std::put_time(&tm_buf, "%Y-%m-%d %H:%M:%S")
+                << '.' << std::setfill('0') << std::setw(3) << now_ms.count();
+  std::string timestamp = timestamp_oss.str();
 
   // Color codes for terminal output
   const char* color_reset = "\033[0m";
@@ -85,14 +95,10 @@ void Logger::Log(Level level, const std::string& message) {
       break;
   }
 
-  std::string log_entry = std::format(
-    "{}[{}] [{}]{} {}",
-    color_code,
-    timestamp,
-    level_str,
-    color_reset,
-    message
-  );
+  std::ostringstream log_oss;
+  log_oss << color_code << "[" << timestamp << "] [" 
+          << level_str << "]" << color_reset << " " << message;
+  std::string log_entry = log_oss.str();
 
   // Add to queue
   {

@@ -13,7 +13,6 @@
 #pragma once
 
 #include <string>
-#include <format>
 #include <mutex>
 #include <queue>
 #include <thread>
