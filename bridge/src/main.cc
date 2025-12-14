@@ -29,8 +29,8 @@ void print_usage(const char* program_name) {
             << "\nOptions:\n"
             << "  -c, --connection <url>    MAVLink connection URL (default: udp://:14550)\n"
             << "  -g, --grpc <address>      gRPC server address (default: 0.0.0.0:50051)\n"
-            << "  -s, --system-id <id>      MAVLink system ID (default: 1)\n"
-            << "  -C, --component-id <id>   MAVLink component ID (default: 1)\n"
+            << "  -s, --system-id <id>      MAVLink system ID (default: 255)\n"
+            << "  -C, --component-id <id>   MAVLink component ID (default: 190)\n"
             << "  -h, --help                Show this help\n"
             << "\nConnection URL formats:\n"
             << "  udp://:14550              UDP server on port 14550\n"
@@ -45,8 +45,8 @@ int main(int argc, char* argv[]) {
   // Default configuration
   std::string connection_url = "udp://:14550";
   std::string grpc_address = "0.0.0.0:50051";
-  uint8_t system_id = 1;
-  uint8_t component_id = 1;
+  uint8_t system_id = 255;
+  uint8_t component_id = 190;
 
   // Parse command line arguments
   for (int i = 1; i < argc; ++i) {
