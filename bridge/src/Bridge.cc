@@ -5,10 +5,61 @@
 
 #include "Bridge.h"
 #include "mavlink/MessageConverter.h"
+#include "mavlink/UdpTransport.h"
+#include "mavlink/SerialTransport.h"
 #include "service/Logger.h"
 #include <format>
+#include <regex>
+#include <stdexcept>
 
 namespace mav2grpc {
+
+std::unique_ptr<Transport> Bridge::parse_connection_url(const std::string& url) {
+  // URL format: protocol://[host]:port or protocol://device:baudrate
+  // Examples:
+  //   udp://:14550 - UDP server on port 14550
+  //   udp://192.168.1.100:14550 - UDP client to 192.168.1.100:14550
+  //   serial:///dev/ttyUSB0:57600 - Serial on /dev/ttyUSB0 at 57600 baud
+
+  std::regex udp_server_regex(R"(udp://:(\d+))");
+  std::regex udp_client_regex(R"(udp://([^:]+):(\d+))");
+  std::regex serial_regex(R"(serial://([^:]+):(\d+))");
+  
+  std::smatch match;
+
+  // UDP server (e.g., udp://:14550)
+  if (std::regex_match(url, match, udp_server_regex)) {
+    uint16_t port = std::stoi(match[1]);
+    Logger::Info(std::format("Connecting to MAVLink via UDP server on port {}", port));
+    return std::make_unique<UdpTransport>(port);
+  }
+
+  // UDP client (e.g., udp://192.168.1.100:14550)
+  if (std::regex_match(url, match, udp_client_regex)) {
+    std::string host = match[1];
+    uint16_t port = std::stoi(match[2]);
+    Logger::Info(std::format("Connecting to MAVLink via UDP client {}:{}", host, port));
+    // UDP client support would need UdpTransport enhancement
+    throw std::runtime_error("UDP client mode not yet implemented");
+  }
+
+  // Serial (e.g., serial:///dev/ttyUSB0:57600)
+  if (std::regex_match(url, match, serial_regex)) {
+    std::string device = match[1];
+    uint32_t baudrate = std::stoi(match[2]);
+    Logger::Info(std::format("Connecting to MAVLink via serial {} @ {} baud", device, baudrate));
+    return std::make_unique<SerialTransport>(device, baudrate);
+  }
+
+  throw std::runtime_error(std::format("Invalid connection URL: {}", url));
+}
+
+Bridge::Bridge(const std::string& connection_url,
+               const std::string& grpc_address,
+               uint8_t system_id,
+               uint8_t component_id)
+    : Bridge(parse_connection_url(connection_url), grpc_address, system_id, component_id) {
+}
 
 Bridge::Bridge(std::unique_ptr<Transport> transport,
                const std::string& grpc_address,

@@ -15,6 +15,16 @@
 namespace mav2grpc {
 
 /**
+ * @brief Connection configuration.
+ */
+struct ConnectionConfig {
+  std::string connection_url;    ///< Connection URL (e.g., "udp://:14550", "serial:///dev/ttyUSB0:57600")
+  std::string grpc_address;      ///< gRPC server address
+  uint8_t system_id;             ///< MAVLink system ID
+  uint8_t component_id;          ///< MAVLink component ID
+};
+
+/**
  * @brief Main bridge coordinator.
  *
  * Orchestrates all components:
@@ -25,8 +35,7 @@ namespace mav2grpc {
  *
  * Usage:
  * @code
- * auto transport = UdpTransport::create_server(14550);
- * Bridge bridge(transport);
+ * Bridge bridge("udp://:14550");
  * bridge.start();
  * bridge.wait(); // blocks until shutdown
  * @endcode
@@ -34,12 +43,30 @@ namespace mav2grpc {
 class Bridge {
 public:
   /**
-   * @brief Construct bridge with transport.
+   * @brief Construct bridge from connection URL.
    *
-   * @param transport MAVLink transport layer (ownership transferred)
+   * Supported URL formats:
+   * - udp://[host]:port - UDP server (e.g., "udp://:14550")
+   * - udp://host:port - UDP client (e.g., "udp://192.168.1.100:14550")
+   * - serial://device:baudrate - Serial connection (e.g., "serial:///dev/ttyUSB0:57600")
+   *
+   * @param connection_url MAVLink connection URL
    * @param grpc_address gRPC server address (default: 0.0.0.0:50051)
    * @param system_id MAVLink system ID (default: 1)
    * @param component_id MAVLink component ID (default: 1)
+   */
+  explicit Bridge(const std::string& connection_url,
+                  const std::string& grpc_address = "0.0.0.0:50051",
+                  uint8_t system_id = 1,
+                  uint8_t component_id = 1);
+
+  /**
+   * @brief Construct bridge with transport (legacy).
+   *
+   * @param transport MAVLink transport layer (ownership transferred)
+   * @param grpc_address gRPC server address
+   * @param system_id MAVLink system ID
+   * @param component_id MAVLink component ID
    */
   explicit Bridge(std::unique_ptr<Transport> transport,
                   const std::string& grpc_address = "0.0.0.0:50051",
@@ -75,6 +102,11 @@ public:
   bool is_running() const;
 
 private:
+  /**
+   * @brief Parse connection URL and create transport.
+   */
+  static std::unique_ptr<Transport> parse_connection_url(const std::string& url);
+
   /**
    * @brief MAVLink message callback - routes to gRPC clients.
    */
