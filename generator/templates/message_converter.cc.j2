@@ -7,6 +7,8 @@
  */
 
 #include "MessageConverter.h"
+#include <cstring>
+#include <algorithm>
 
 namespace mav2grpc {
 
@@ -95,8 +97,13 @@ void MessageConverter::convert_{{ msg.name|lower }}_to_proto(
   proto->set_{{ sanitize_field_name(field.name) }}(
     std::string(mavlink_data.{{ field.name }}, 
                 strnlen(mavlink_data.{{ field.name }}, {{ field.array_length }})));
+{% elif field.base_type == 'uint8_t' %}
+  // Bytes field: {{ field.name }}
+  proto->set_{{ sanitize_field_name(field.name) }}(
+    std::string(reinterpret_cast<const char*>(mavlink_data.{{ field.name }}), 
+                {{ field.array_length }}));
 {% else %}
-  // Array field: {{ field.name }}
+  // Repeated array field: {{ field.name }}
   for (size_t i = 0; i < {{ field.array_length }}; ++i) {
 {% if field.type_info.is_enum %}
     proto->add_{{ sanitize_field_name(field.name) }}(
@@ -126,19 +133,49 @@ bool MessageConverter::convert_{{ msg.name|lower }}_from_proto(
     uint8_t system_id,
     uint8_t component_id) {
   
-{% set scalar_fields = [] %}
+{% set pack_params = [] %}
 {% for field in msg.fields %}
-{% if not field.is_array and field.type != 'uint8_t_mavlink_version' %}
-{% set _ = scalar_fields.append(field) %}
+{% if field.type != 'uint8_t_mavlink_version' %}
+{% set _ = pack_params.append(field) %}
 {% endif %}
 {% endfor %}
+
+{% for field in pack_params %}
+{% if field.is_array %}
+{% if field.base_type == 'char' %}
+  // Convert string to char array
+  char {{ field.name }}_buf[{{ field.array_length }}] = {};
+  const auto& {{ field.name }}_str = proto.{{ sanitize_field_name(field.name) }}();
+  std::strncpy({{ field.name }}_buf, {{ field.name }}_str.c_str(), {{ field.array_length }} - 1);
+{% elif field.base_type == 'uint8_t' %}
+  // Convert bytes to uint8_t array
+  uint8_t {{ field.name }}_buf[{{ field.array_length }}] = {};
+  const auto& {{ field.name }}_bytes = proto.{{ sanitize_field_name(field.name) }}();
+  std::memcpy({{ field.name }}_buf, {{ field.name }}_bytes.data(), 
+              std::min({{ field.name }}_bytes.size(), size_t({{ field.array_length }})));
+{% else %}
+  // Convert repeated field to array
+  {{ field.base_type }} {{ field.name }}_buf[{{ field.array_length }}] = {};
+  for (int i = 0; i < std::min(proto.{{ sanitize_field_name(field.name) }}_size(), {{ field.array_length }}); ++i) {
+{% if field.type_info.is_enum %}
+    {{ field.name }}_buf[i] = static_cast<{{ field.base_type }}>(proto.{{ sanitize_field_name(field.name) }}(i));
+{% else %}
+    {{ field.name }}_buf[i] = proto.{{ sanitize_field_name(field.name) }}(i);
+{% endif %}
+  }
+{% endif %}
+{% endif %}
+{% endfor %}
+
   // Pack MAVLink message
   mavlink_msg_{{ msg.name|lower }}_pack(
     system_id,
     component_id,
     &mavlink_msg
-{% for field in scalar_fields %}
-{% if field.type_info.is_enum %}
+{% for field in pack_params %}
+{% if field.is_array %}
+    , {{ field.name }}_buf
+{% elif field.type_info.is_enum %}
     , static_cast<uint8_t>(proto.{{ sanitize_field_name(field.name) }}())
 {% else %}
     , proto.{{ sanitize_field_name(field.name) }}()

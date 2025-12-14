@@ -50,6 +50,8 @@ class TypeConverter:
             'string'
             >>> TypeConverter.to_proto_type("uint8_t[8]")
             'bytes'
+            >>> TypeConverter.to_proto_type("uint32_t[6]")
+            'repeated uint32'
         """
         # Handle array types
         if "[" in mavlink_type and "]" in mavlink_type:
@@ -59,9 +61,13 @@ class TypeConverter:
             if base_type == "char":
                 return "string"
 
-            # Other arrays become bytes (more efficient than repeated)
-            # Can also use "repeated <type>" but bytes is more compact
-            return "bytes"
+            # uint8_t[] arrays become bytes (compact binary representation)
+            if base_type == "uint8_t":
+                return "bytes"
+
+            # Other numeric arrays use repeated
+            proto_type, _ = cls.TYPE_MAP.get(base_type, ("bytes", False))
+            return f"repeated {proto_type}"
 
         # Look up in type map
         proto_type, _ = cls.TYPE_MAP.get(mavlink_type, ("bytes", False))
@@ -158,22 +164,25 @@ class TypeConverter:
     @classmethod
     def sanitize_field_name(cls, name: str) -> str:
         """
-        Convert MAVLink field name to Proto field name (snake_case).
+        Convert MAVLink field name to Proto field name (snake_case, lowercase).
 
         Args:
-            name: MAVLink field name (already snake_case usually)
+            name: MAVLink field name
 
         Returns:
-            Proto field name (snake_case)
+            Proto field name (lowercase snake_case)
 
         Examples:
             >>> TypeConverter.sanitize_field_name("base_mode")
             'base_mode'
-            >>> TypeConverter.sanitize_field_name("custom_mode")
-            'custom_mode'
+            >>> TypeConverter.sanitize_field_name("Vcc")
+            'vcc'
+            >>> TypeConverter.sanitize_field_name("Vservo")
+            'vservo'
         """
-        # MAVLink fields are already snake_case, just return as-is
-        return name
+        # Convert to lowercase for protobuf compatibility
+        # Protobuf field names should be lowercase_with_underscores
+        return name.lower()
 
     @classmethod
     def format_comment(cls, text: str, indent: int = 0) -> str:

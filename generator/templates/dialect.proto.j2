@@ -89,7 +89,9 @@ message {{ sanitize_message_name(message.name) }} {
   {% if field.invalid %}
   // Invalid value: {{ field.invalid }}
   {% endif %}
-  {% if field.enum %}
+  {% if field.is_array %}
+  {{ to_proto_type(field.type) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
+  {% elif field.enum %}
   {{ resolve_enum_package(field.enum, current_dialect_name) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
   {% else %}
   {{ to_proto_type(field.type) }} {{ sanitize_field_name(field.name) }} = {{ loop.index }};
