@@ -81,51 +81,27 @@ int main(int argc, char* argv[]) {
 
   Logger::Info("MAVLink to gRPC Bridge starting...");
 
-  try {
-    Logger::Info("Configuration:");
-    {
-      std::ostringstream oss;
-      oss << "  Connection: " << connection_url;
-      Logger::Info(oss.str());
-    }
-    {
-      std::ostringstream oss;
-      oss << "  gRPC address: " << grpc_address;
-      Logger::Info(oss.str());
-    }
-    {
-      std::ostringstream oss;
-      oss << "  System ID: " << static_cast<int>(system_id);
-      Logger::Info(oss.str());
-    }
-    {
-      std::ostringstream oss;
-      oss << "  Component ID: " << static_cast<int>(component_id);
-      Logger::Info(oss.str());
-    }
+  std::cout << "Configuration:\n"
+            << "  Connection: " << connection_url << "\n"
+            << "  gRPC address: " << grpc_address << "\n"
+            << "  System ID: " << static_cast<int>(system_id) << "\n"
+            << "  Component ID: " << static_cast<int>(component_id) << std::endl;
 
-    // Create and start bridge
-    g_bridge = std::make_unique<Bridge>(
-      connection_url,
-      grpc_address,
-      system_id,
-      component_id
-    );
+  // Create and start bridge
+  g_bridge = std::make_unique<Bridge>(
+    connection_url,
+    grpc_address,
+    system_id,
+    component_id
+  );
 
-    g_bridge->start();
+  g_bridge->start();
 
-    Logger::Info("Bridge running. Press Ctrl+C to stop.");
+  Logger::Info("Bridge running. Press Ctrl+C to stop.");
 
-    // Wait for bridge to finish
-    g_bridge->wait();
+  // Wait for bridge to finish
+  g_bridge->wait();
 
-    Logger::Info("Bridge shutdown complete");
-    return 0;
-
-  } catch (const std::exception& e) {
-    std::ostringstream oss;
-    oss << "Fatal error: " << e.what();
-    Logger::Error(oss.str());
-    return 1;
-  }
+  Logger::Info("Bridge shutdown complete");
+  return 0;
 }
