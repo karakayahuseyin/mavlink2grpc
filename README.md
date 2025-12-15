@@ -64,9 +64,10 @@ cd bridge/build
 # Change connection string (-c) as needed
 ```
 
-### Start Inspector
+### Start Inspector Demo
 ```bash
 cd inspector
+npm install
 node server.js -g localhost:50051 -p 8000
 ```
 

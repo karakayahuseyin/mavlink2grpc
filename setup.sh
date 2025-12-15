@@ -41,3 +41,10 @@ python3 -m pymavlink.tools.mavgen --lang=C --wire-protocol=2.0 --output=generate
 echo "-- Running CMake to install headers..."
 cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=install -DMAVLINK_DIALECT=common -DMAVLINK_VERSION=2.0
 cmake --build build --target install
+
+# Return to the original directory
+cd ..
+echo "-- Installing Python dependencies for the generator..."
+pip3 install -r generator/requirements.txt
+
+echo "Environment setup complete."
