@@ -33,5 +33,10 @@ proto/
 bridge/src/mavlink/MessageConverter.cc
 bridge/src/mavlink/MessageConverter.h
 
+# Node.js dependencies
 node_modules/
 package-lock.json
+
+# AI agent instructions
+AGENT.md
+.agent 
